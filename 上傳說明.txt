@@ -1,0 +1,19 @@
+HVAC 現場工具：GitHub Pages 上傳步驟
+
+1. 將 ZIP 解壓縮。
+2. 打開：
+   https://github.com/flc00114477-lang/hvac-field-calculator
+3. 按「Add file」→「Upload files」。
+4. 將解壓後資料夾內的所有內容一次過拖入上傳頁面：
+   docs、source、README.md、上傳說明.txt、.gitignore
+5. 頁面底部按「Commit changes」。
+6. 打開 repository 的「Settings」→ 左邊「Pages」。
+7. 在「Build and deployment」選擇：
+   Source：Deploy from a branch
+   Branch：main
+   Folder：/docs
+8. 按「Save」，等候約 1 至 3 分鐘。
+9. 網站網址：
+   https://flc00114477-lang.github.io/hvac-field-calculator/
+
+注意：不要直接把 ZIP 本身上傳；要先解壓，再一次過上傳解壓後的內容。
