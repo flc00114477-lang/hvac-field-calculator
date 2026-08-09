@@ -101,6 +101,7 @@ Error generating stack: `+e.message+`
         const ductArea=()=>{if(state.shape==='round'){const d=num('duct-diameter')/1000;return Number.isFinite(d)&&d>0?Math.PI*d*d/4:null}const w=num('duct-width')/1000,h=num('duct-height')/1000;return Number.isFinite(w)&&Number.isFinite(h)&&w>0&&h>0?w*h:null};
         const displayFlow=(q,unit=state.flowUnit)=>unit==='m3s'?q:unit==='m3h'?q*3600:q/0.00047194745;
         const flowUnitText=()=>state.flowUnit==='m3s'?'m³/s':state.flowUnit==='m3h'?'m³/h':'CFM';
+        const flowDecimals=()=>state.flowUnit==='m3s'?4:state.flowUnit==='m3h'?1:0;
         const pointValues=()=>[...document.querySelectorAll('.duct-point-input')].map(x=>Number.parseFloat(x.value)).filter(x=>Number.isFinite(x)&&x>0);
         function updatePointNumbers(){document.querySelectorAll('.duct-point').forEach((row,i)=>{const label=row.querySelector('.duct-point-name');if(label)label.textContent='測點 '+(i+1)+'（m/s）'})}
         function updateMultiSummary(){
@@ -154,7 +155,9 @@ Error generating stack: `+e.message+`
           const paPerM=friction*dynamic/dh;
           const total=Number.isFinite(length)&&length>0?paPerM*length:null;
           const eqDiameter=state.shape==='rect'?1.3*Math.pow(width*height,.625)/Math.pow(width+height,.25):diameter;
-          document.getElementById('duct-velocity-out').textContent=f(velocity,2);
+          document.getElementById('duct-flow-out').textContent=f(displayFlow(q),flowDecimals());
+          document.getElementById('duct-result-flow-unit').textContent=flowUnitText();
+          document.getElementById('duct-velocity-out').textContent=f(velocity,2)+' m/s';
           document.getElementById('duct-pam-out').textContent=f(paPerM,2)+' Pa/m';
           document.getElementById('duct-area-out').textContent=f(area,3)+' m²';
           document.getElementById('duct-dh-out').textContent=f(dh*1000,0)+' mm';
@@ -231,8 +234,8 @@ Error generating stack: `+e.message+`
             </section>
             <div id="duct-error" class="duct-error" hidden></div>
             <section id="duct-result" class="duct-result" aria-live="polite">
-              <div class="duct-result-top"><div><p class="eyebrow">DUCT VELOCITY</p><h2>計算結果</h2></div><div class="duct-hero"><strong id="duct-velocity-out">—</strong><span>m/s</span></div></div>
-              <div class="duct-result-grid"><div><span>直管摩擦壓損</span><strong id="duct-pam-out">—</strong></div><div><span>全段直管壓損</span><strong id="duct-total-out">—</strong></div><div><span>有效截面面積</span><strong id="duct-area-out">—</strong></div><div><span>水力直徑</span><strong id="duct-dh-out">—</strong></div><div><span>等效圓管直徑</span><strong id="duct-eq-out">—</strong></div><div><span>計算基準</span><strong>20°C 空氣</strong></div></div>
+              <div class="duct-result-top"><div><p class="eyebrow">AIRFLOW RESULT</p><h2>實際風量</h2></div><div class="duct-hero"><strong id="duct-flow-out">—</strong><span id="duct-result-flow-unit">m³/s</span></div></div>
+              <div class="duct-result-grid"><div><span>平均風速</span><strong id="duct-velocity-out">—</strong></div><div><span>直管摩擦壓損</span><strong id="duct-pam-out">—</strong></div><div><span>全段直管壓損</span><strong id="duct-total-out">—</strong></div><div><span>有效截面面積</span><strong id="duct-area-out">—</strong></div><div><span>水力直徑</span><strong id="duct-dh-out">—</strong></div><div><span>等效圓管直徑</span><strong id="duct-eq-out">—</strong></div></div>
             </section>
             <p id="duct-warning" class="duct-warning"></p>
             <details class="duct-method"><summary><span>計算資料及限制</span><span aria-hidden="true">＋</span></summary><p>壓損採用 Darcy–Weisbach 直管摩擦公式，空氣密度按 20°C 約 1.204 kg/m³。結果未包括彎頭、三通、風閘、風咀、縮放管及其他局部阻力；正式選機或平衡風量時應另加配件壓損並以實測覆核。</p></details>`;
