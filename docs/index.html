@@ -85,6 +85,7 @@ Error generating stack: `+e.message+`
       .duct-result-grid strong{font-size:13px;overflow-wrap:anywhere}
       .duct-warning{color:#75552e;background:#fff8ed;border:1px solid #edd8be;border-radius:12px;margin-top:10px;padding:10px 11px;font-size:9px;line-height:1.55}
       .duct-error{color:#8a3e30;background:#fff3f0;border:1px solid #efd1ca;border-radius:13px;margin-top:12px;padding:13px;font-size:10px;font-weight:700;line-height:1.55}
+      .duct-error.waiting{color:#526763;background:#f2f7f5;border-color:#d7e5e1}
       .duct-method{background:#fff;border:1px solid #e1e7e5;border-radius:14px;margin-top:10px;overflow:hidden}
       .duct-method summary{color:#405653;cursor:pointer;justify-content:space-between;align-items:center;min-height:43px;padding:0 13px;font-size:10px;font-weight:750;display:flex}
       .duct-method p{color:var(--muted);border-top:1px solid #edf1f0;margin:0;padding:11px 13px;font-size:9px;line-height:1.65}
@@ -95,9 +96,10 @@ Error generating stack: `+e.message+`
         const state={shape:'round',flowUnit:'m3s'};
         const f=(n,d=2)=>Number.isFinite(n)?n.toLocaleString('zh-HK',{maximumFractionDigits:d,minimumFractionDigits:0}):'—';
         const num=(id)=>Number.parseFloat(document.getElementById(id)?.value||'');
-        const qM3s=()=>{const q=num('duct-flow');return state.flowUnit==='m3s'?q:state.flowUnit==='m3h'?q/3600:q*0.00047194745};
+        const flowToM3s=(q,unit=state.flowUnit)=>unit==='m3s'?q:unit==='m3h'?q/3600:q*0.00047194745;
+        const qM3s=()=>flowToM3s(num('duct-flow'));
         const ductArea=()=>{if(state.shape==='round'){const d=num('duct-diameter')/1000;return Number.isFinite(d)&&d>0?Math.PI*d*d/4:null}const w=num('duct-width')/1000,h=num('duct-height')/1000;return Number.isFinite(w)&&Number.isFinite(h)&&w>0&&h>0?w*h:null};
-        const displayFlow=(q)=>state.flowUnit==='m3s'?q:state.flowUnit==='m3h'?q*3600:q/0.00047194745;
+        const displayFlow=(q,unit=state.flowUnit)=>unit==='m3s'?q:unit==='m3h'?q*3600:q/0.00047194745;
         const flowUnitText=()=>state.flowUnit==='m3s'?'m³/s':state.flowUnit==='m3h'?'m³/h':'CFM';
         const pointValues=()=>[...document.querySelectorAll('.duct-point-input')].map(x=>Number.parseFloat(x.value)).filter(x=>Number.isFinite(x)&&x>0);
         function updatePointNumbers(){document.querySelectorAll('.duct-point').forEach((row,i)=>{const label=row.querySelector('.duct-point-name');if(label)label.textContent='測點 '+(i+1)+'（m/s）'})}
@@ -122,15 +124,19 @@ Error generating stack: `+e.message+`
         function resetMultiPoints(){
           const grid=document.getElementById('duct-point-grid');if(grid){grid.innerHTML='';for(let i=0;i<6;i++)addPoint()}
           const panel=document.getElementById('duct-multi-panel'),toggle=document.getElementById('duct-multi-toggle');
-          if(panel)panel.hidden=true;if(toggle){toggle.classList.remove('active');toggle.setAttribute('aria-expanded','false');toggle.querySelector('span').textContent='展開'}
+          if(panel)panel.hidden=false;if(toggle){toggle.classList.add('active');toggle.setAttribute('aria-expanded','true');toggle.querySelector('span').textContent='收起'}
+          const directPanel=document.getElementById('duct-direct-panel'),directToggle=document.getElementById('duct-direct-toggle');
+          if(directPanel)directPanel.hidden=true;if(directToggle){directToggle.classList.remove('active');directToggle.setAttribute('aria-expanded','false');directToggle.querySelector('span').textContent='展開'}
           updateMultiSummary();
         }
         function calculate(){
           const result=document.getElementById('duct-result');
           const error=document.getElementById('duct-error');
+          const warning=document.getElementById('duct-warning');
           if(!result||!error)return;
           const q=qM3s(),length=num('duct-length'),roughMm=num('duct-roughness');
-          if(!Number.isFinite(q)||q<=0){error.textContent='請輸入大過 0 嘅風量。';error.hidden=false;result.hidden=true;return}
+          if(!Number.isFinite(q)||q<=0){error.classList.add('waiting');error.textContent='等待量度數據：請輸入多點風速並套用計算風量，或者展開「直接輸入已知風量」。';error.hidden=false;result.hidden=true;if(warning)warning.hidden=true;return}
+          error.classList.remove('waiting');
           let area,dh,width,height,diameter;
           if(state.shape==='round'){
             diameter=num('duct-diameter')/1000;
@@ -159,7 +165,7 @@ Error generating stack: `+e.message+`
           if(velocity>8)warnings.push('風速高於 8 m/s，噪音及壓損風險較高');
           if(paPerM>1.5)warnings.push('直管摩擦壓損高於 1.5 Pa/m');
           if(reynolds<2300)warnings.push('流動處於低雷諾數範圍');
-          document.getElementById('duct-warning').textContent=warnings.length?'請留意：'+warnings.join('；')+'。':'現時風速及直管摩擦壓損屬一般現場可再覆核範圍。';
+          warning.hidden=false;warning.textContent=warnings.length?'請留意：'+warnings.join('；')+'。':'現時風速及直管摩擦壓損屬一般現場可再覆核範圍。';
           error.hidden=true;result.hidden=false;
         }
         function syncUI(){
@@ -171,8 +177,8 @@ Error generating stack: `+e.message+`
         }
         function resetDuct(){
           state.shape='round';state.flowUnit='m3s';
-          const defaults={'duct-flow':'1.4','duct-diameter':'500','duct-width':'600','duct-height':'400','duct-length':'10','duct-roughness':'0.09'};
-          Object.entries(defaults).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v});resetMultiPoints();syncUI();
+          const defaults={'duct-flow':'','duct-diameter':'500','duct-width':'600','duct-height':'400','duct-length':'10','duct-roughness':'0.09'};
+          Object.entries(defaults).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v});const label=document.getElementById('duct-flow-label');if(label)label.textContent='m³/s';resetMultiPoints();syncUI();
         }
         function setDuctActive(active){
           const shell=document.querySelector('.app-shell'),tool=document.getElementById('duct-tool'),btn=document.getElementById('duct-tab');
@@ -193,26 +199,30 @@ Error generating stack: `+e.message+`
           const btn=document.createElement('button');btn.id='duct-tab';btn.type='button';btn.innerHTML='<span aria-hidden="true">▤</span>風管計算';nav.appendChild(btn);
           const tool=document.createElement('div');tool.id='duct-tool';tool.className='duct-tool';
           tool.innerHTML=`
-            <div class="duct-intro"><p>輸入現有風管尺寸及實測風量，即時計算風速同直管摩擦壓損。</p><span>SI</span></div>
+            <div class="duct-intro"><p>輸入風管尺寸及多點實測風速，自動計算風量同直管摩擦壓損。</p><span>SI</span></div>
             <section class="duct-card" aria-labelledby="duct-input-title">
               <div class="duct-card-head"><div><p class="eyebrow">DUCT INPUT</p><h2 id="duct-input-title">風管資料</h2></div><span>現場估算</span></div>
               <div class="duct-segment" aria-label="風管形狀"><button type="button" data-duct-shape="round">圓形風管</button><button type="button" data-duct-shape="rect">方形風管</button></div>
-              <div class="duct-field-grid">
-                <div class="duct-field full"><label for="duct-flow">風量</label><div class="duct-input"><input id="duct-flow" type="number" inputmode="decimal" min="0" step="any" value="1.4"><span id="duct-flow-label">m³/s</span></div><div class="duct-unit-row"><button type="button" data-flow-unit="m3s">m³/s</button><button type="button" data-flow-unit="m3h">m³/h</button><button type="button" data-flow-unit="cfm">CFM</button></div></div>
+              <div id="duct-known-size" class="duct-field-grid">
+                <div class="duct-field full duct-round-only"><label for="duct-diameter">圓管內徑</label><div class="duct-input"><input id="duct-diameter" type="number" inputmode="decimal" min="1" value="500"><span>mm</span></div></div>
+                <div class="duct-field duct-rect-only"><label for="duct-width">方管內闊</label><div class="duct-input"><input id="duct-width" type="number" inputmode="decimal" min="1" value="600"><span>mm</span></div></div>
+                <div class="duct-field duct-rect-only"><label for="duct-height">方管內高</label><div class="duct-input"><input id="duct-height" type="number" inputmode="decimal" min="1" value="400"><span>mm</span></div></div>
               </div>
+              <div class="duct-field-grid"><div class="duct-field full"><label>風量顯示／輸入單位</label><div class="duct-unit-row"><button type="button" data-flow-unit="m3s">m³/s</button><button type="button" data-flow-unit="m3h">m³/h</button><button type="button" data-flow-unit="cfm">CFM</button></div></div></div>
               <div class="duct-multi">
-                <button id="duct-multi-toggle" class="duct-multi-toggle" type="button" aria-expanded="false" aria-controls="duct-multi-panel">使用多點風速量度（選填）<span>展開</span></button>
-                <div id="duct-multi-panel" class="duct-multi-panel" hidden>
+                <button id="duct-multi-toggle" class="duct-multi-toggle active" type="button" aria-expanded="true" aria-controls="duct-multi-panel">多點風速量度<span>收起</span></button>
+                <div id="duct-multi-panel" class="duct-multi-panel">
                   <p class="duct-multi-note">輸入同一風管截面嘅多個風速讀數（m/s），空白測點會自動忽略。系統會先計平均風速，再乘風管截面面積得出風量。</p>
                   <div id="duct-point-grid" class="duct-point-grid"></div>
                   <div id="duct-multi-summary" class="duct-multi-summary">尚未輸入有效風速讀數。</div>
                   <div class="duct-multi-actions"><button id="duct-add-point" class="duct-add-point" type="button">＋ 增加測點</button><button id="duct-apply-average" class="duct-apply-average" type="button" disabled>套用計算風量</button></div>
                 </div>
               </div>
-              <div id="duct-known-size" class="duct-field-grid">
-                <div class="duct-field full duct-round-only"><label for="duct-diameter">圓管內徑</label><div class="duct-input"><input id="duct-diameter" type="number" inputmode="decimal" min="1" value="500"><span>mm</span></div></div>
-                <div class="duct-field duct-rect-only"><label for="duct-width">方管內闊</label><div class="duct-input"><input id="duct-width" type="number" inputmode="decimal" min="1" value="600"><span>mm</span></div></div>
-                <div class="duct-field duct-rect-only"><label for="duct-height">方管內高</label><div class="duct-input"><input id="duct-height" type="number" inputmode="decimal" min="1" value="400"><span>mm</span></div></div>
+              <div class="duct-multi">
+                <button id="duct-direct-toggle" class="duct-multi-toggle" type="button" aria-expanded="false" aria-controls="duct-direct-panel">直接輸入已知風量（選填）<span>展開</span></button>
+                <div id="duct-direct-panel" class="duct-multi-panel" hidden>
+                  <div class="duct-field-grid" style="margin-top:0"><div class="duct-field full"><label for="duct-flow">已知風量</label><div class="duct-input"><input id="duct-flow" type="number" inputmode="decimal" min="0" step="any" value="" placeholder="輸入已知風量"><span id="duct-flow-label">m³/s</span></div></div></div>
+                </div>
               </div>
               <div class="duct-field-grid">
                 <div class="duct-field"><label for="duct-length">直管長度（選填）</label><div class="duct-input"><input id="duct-length" type="number" inputmode="decimal" min="0" step="0.1" value="10"><span>m</span></div></div>
@@ -232,9 +242,11 @@ Error generating stack: `+e.message+`
           tool.addEventListener('input',e=>{calculate();if(e.target.matches('.duct-point-input,#duct-diameter,#duct-width,#duct-height'))updateMultiSummary()});
           tool.addEventListener('change',e=>{calculate();if(e.target.matches('.duct-point-input,#duct-diameter,#duct-width,#duct-height'))updateMultiSummary()});
           tool.querySelectorAll('[data-duct-shape]').forEach(b=>b.addEventListener('click',()=>{state.shape=b.dataset.ductShape;updateMultiSummary();syncUI()}));
-          tool.querySelectorAll('[data-flow-unit]').forEach(b=>b.addEventListener('click',()=>{state.flowUnit=b.dataset.flowUnit;document.getElementById('duct-flow-label').textContent=b.textContent;updateMultiSummary();syncUI()}));
+          tool.querySelectorAll('[data-flow-unit]').forEach(b=>b.addEventListener('click',()=>{const oldUnit=state.flowUnit,current=num('duct-flow'),q=Number.isFinite(current)?flowToM3s(current,oldUnit):null;state.flowUnit=b.dataset.flowUnit;if(q!=null)document.getElementById('duct-flow').value=String(Math.round(displayFlow(q)*10000)/10000);document.getElementById('duct-flow-label').textContent=b.textContent;updateMultiSummary();syncUI()}));
           const multiToggle=document.getElementById('duct-multi-toggle'),multiPanel=document.getElementById('duct-multi-panel');
           multiToggle.addEventListener('click',()=>{const open=multiPanel.hidden;multiPanel.hidden=!open;multiToggle.classList.toggle('active',open);multiToggle.setAttribute('aria-expanded',String(open));multiToggle.querySelector('span').textContent=open?'收起':'展開'});
+          const directToggle=document.getElementById('duct-direct-toggle'),directPanel=document.getElementById('duct-direct-panel');
+          directToggle.addEventListener('click',()=>{const open=directPanel.hidden;directPanel.hidden=!open;directToggle.classList.toggle('active',open);directToggle.setAttribute('aria-expanded',String(open));directToggle.querySelector('span').textContent=open?'收起':'展開'});
           document.getElementById('duct-add-point').addEventListener('click',()=>addPoint());
           document.getElementById('duct-point-grid').addEventListener('click',e=>{if(!e.target.matches('.duct-point-remove'))return;const rows=document.querySelectorAll('.duct-point');if(rows.length<=2)return;e.target.closest('.duct-point').remove();updatePointNumbers();updateMultiSummary()});
           document.getElementById('duct-apply-average').addEventListener('click',()=>{const flow=updateMultiSummary();if(flow==null)return;document.getElementById('duct-flow').value=String(Math.round(flow*10000)/10000);calculate()});
