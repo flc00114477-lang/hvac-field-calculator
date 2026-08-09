@@ -53,6 +53,25 @@ Error generating stack: `+e.message+`
       .duct-unit-row{gap:5px;margin-top:7px;display:flex}
       .duct-unit-row button{color:#6d7d7a;cursor:pointer;background:#f4f7f6;border:1px solid #dde5e3;border-radius:8px;min-height:31px;padding:0 9px;font-size:9px;font-weight:750}
       .duct-unit-row button.active{color:#fff;background:var(--teal);border-color:var(--teal)}
+      .duct-multi{border-top:1px solid #edf1f0;margin-top:13px;padding-top:12px}
+      .duct-multi-toggle{color:#405653;cursor:pointer;background:#f5f8f7;border:1px solid #dce5e2;border-radius:11px;align-items:center;justify-content:space-between;width:100%;min-height:43px;padding:0 12px;font-size:10px;font-weight:800;display:flex}
+      .duct-multi-toggle span{color:var(--teal);font-size:9px}
+      .duct-multi-toggle.active{color:var(--teal-dark);background:var(--mint);border-color:#bcded5}
+      .duct-multi-panel{background:#f8faf9;border:1px solid #e1e8e6;border-radius:12px;margin-top:8px;padding:11px}
+      .duct-multi-note{color:#697b77;margin:0;font-size:8px;line-height:1.55}
+      .duct-point-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px;display:grid}
+      .duct-point{min-width:0}
+      .duct-point label{color:#536763;justify-content:space-between;align-items:center;margin:0 2px 4px;font-size:8px;font-weight:750;display:flex}
+      .duct-point-remove{color:#8a5a51;cursor:pointer;background:transparent;border:0;padding:2px;font-size:12px;line-height:1}
+      .duct-point-input{color:#213936;background:#fff;border:1px solid #dce4e2;border-radius:9px;outline:0;width:100%;min-height:41px;padding:0 9px;font-size:16px;font-weight:750;box-sizing:border-box}
+      .duct-point-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px #2c8a7a17}
+      .duct-multi-actions{align-items:center;justify-content:space-between;gap:7px;margin-top:9px;display:flex}
+      .duct-multi-actions button{cursor:pointer;border-radius:9px;min-height:36px;padding:0 10px;font-size:9px;font-weight:800}
+      .duct-add-point{color:var(--teal-dark);background:#fff;border:1px solid #cfe0dc}
+      .duct-apply-average{color:#fff;background:var(--teal);border:1px solid var(--teal);flex:1}
+      .duct-apply-average:disabled{cursor:not-allowed;opacity:.45}
+      .duct-multi-summary{color:#405653;background:#edf3f1;border-radius:9px;margin-top:9px;padding:9px 10px;font-size:9px;line-height:1.5}
+      .duct-multi-summary strong{color:var(--teal-dark);font-size:12px}
       .duct-result{color:#fff;background:radial-gradient(circle at 100% 0,#a4d2ee2e,#0000 44%),linear-gradient(145deg,#244a5e,#173746);border-radius:20px;margin-top:12px;padding:17px 14px 15px;box-shadow:0 16px 34px #17374635}
       .duct-result-top{align-items:flex-end;justify-content:space-between;gap:12px;display:flex}
       .duct-result-top .eyebrow{color:#a9d5e9;margin:0 0 4px;font-size:8px;font-weight:800;letter-spacing:.12em}
@@ -69,7 +88,7 @@ Error generating stack: `+e.message+`
       .duct-method{background:#fff;border:1px solid #e1e7e5;border-radius:14px;margin-top:10px;overflow:hidden}
       .duct-method summary{color:#405653;cursor:pointer;justify-content:space-between;align-items:center;min-height:43px;padding:0 13px;font-size:10px;font-weight:750;display:flex}
       .duct-method p{color:var(--muted);border-top:1px solid #edf1f0;margin:0;padding:11px 13px;font-size:9px;line-height:1.65}
-      @media(width<=420px){.tool-tabs button{padding-left:2px!important;padding-right:2px!important;font-size:9px!important}.tool-tabs button span{font-size:11px!important}.duct-field-grid{gap:7px}.duct-card{padding-left:11px;padding-right:11px}}
+      @media(width<=420px){.tool-tabs button{padding-left:2px!important;padding-right:2px!important;font-size:9px!important}.tool-tabs button span{font-size:11px!important}.duct-field-grid{gap:7px}.duct-card{padding-left:11px;padding-right:11px}.duct-point-grid{gap:6px}}
     </style>
     <script>
       (()=>{
@@ -77,6 +96,35 @@ Error generating stack: `+e.message+`
         const f=(n,d=2)=>Number.isFinite(n)?n.toLocaleString('zh-HK',{maximumFractionDigits:d,minimumFractionDigits:0}):'—';
         const num=(id)=>Number.parseFloat(document.getElementById(id)?.value||'');
         const qM3s=()=>{const q=num('duct-flow');return state.flowUnit==='m3s'?q:state.flowUnit==='m3h'?q/3600:q*0.00047194745};
+        const ductArea=()=>{if(state.shape==='round'){const d=num('duct-diameter')/1000;return Number.isFinite(d)&&d>0?Math.PI*d*d/4:null}const w=num('duct-width')/1000,h=num('duct-height')/1000;return Number.isFinite(w)&&Number.isFinite(h)&&w>0&&h>0?w*h:null};
+        const displayFlow=(q)=>state.flowUnit==='m3s'?q:state.flowUnit==='m3h'?q*3600:q/0.00047194745;
+        const flowUnitText=()=>state.flowUnit==='m3s'?'m³/s':state.flowUnit==='m3h'?'m³/h':'CFM';
+        const pointValues=()=>[...document.querySelectorAll('.duct-point-input')].map(x=>Number.parseFloat(x.value)).filter(x=>Number.isFinite(x)&&x>0);
+        function updatePointNumbers(){document.querySelectorAll('.duct-point').forEach((row,i)=>{const label=row.querySelector('.duct-point-name');if(label)label.textContent='測點 '+(i+1)+'（m/s）'})}
+        function updateMultiSummary(){
+          const values=pointValues(),averageVelocity=values.length?values.reduce((a,b)=>a+b,0)/values.length:null,area=ductArea();
+          const qM3sValue=averageVelocity!=null&&area!=null?averageVelocity*area:null,shownFlow=qM3sValue==null?null:displayFlow(qM3sValue);
+          const summary=document.getElementById('duct-multi-summary'),apply=document.getElementById('duct-apply-average');
+          if(summary){
+            if(averageVelocity==null)summary.textContent='尚未輸入有效風速讀數。';
+            else if(area==null)summary.innerHTML='有效測點 '+values.length+' 個　平均風速 <strong>'+f(averageVelocity,3)+' m/s</strong><br>請先輸入有效風管尺寸。';
+            else summary.innerHTML='有效測點 '+values.length+' 個　平均風速 <strong>'+f(averageVelocity,3)+' m/s</strong><br>計算風量 <strong>'+f(shownFlow,4)+' '+flowUnitText()+'</strong>';
+          }
+          if(apply)apply.disabled=shownFlow==null;
+          return shownFlow;
+        }
+        function addPoint(value=''){
+          const grid=document.getElementById('duct-point-grid');if(!grid||grid.children.length>=20)return;
+          const row=document.createElement('div');row.className='duct-point';
+          row.innerHTML='<label><span class="duct-point-name"></span><button class="duct-point-remove" type="button" aria-label="刪除此測點">×</button></label><input class="duct-point-input" type="number" inputmode="decimal" min="0" step="any" value="'+value+'" placeholder="0">';
+          grid.appendChild(row);updatePointNumbers();updateMultiSummary();
+        }
+        function resetMultiPoints(){
+          const grid=document.getElementById('duct-point-grid');if(grid){grid.innerHTML='';for(let i=0;i<6;i++)addPoint()}
+          const panel=document.getElementById('duct-multi-panel'),toggle=document.getElementById('duct-multi-toggle');
+          if(panel)panel.hidden=true;if(toggle){toggle.classList.remove('active');toggle.setAttribute('aria-expanded','false');toggle.querySelector('span').textContent='展開'}
+          updateMultiSummary();
+        }
         function calculate(){
           const result=document.getElementById('duct-result');
           const error=document.getElementById('duct-error');
@@ -124,7 +172,7 @@ Error generating stack: `+e.message+`
         function resetDuct(){
           state.shape='round';state.flowUnit='m3s';
           const defaults={'duct-flow':'1.4','duct-diameter':'500','duct-width':'600','duct-height':'400','duct-length':'10','duct-roughness':'0.09'};
-          Object.entries(defaults).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v});syncUI();
+          Object.entries(defaults).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v});resetMultiPoints();syncUI();
         }
         function setDuctActive(active){
           const shell=document.querySelector('.app-shell'),tool=document.getElementById('duct-tool'),btn=document.getElementById('duct-tab');
@@ -152,6 +200,15 @@ Error generating stack: `+e.message+`
               <div class="duct-field-grid">
                 <div class="duct-field full"><label for="duct-flow">風量</label><div class="duct-input"><input id="duct-flow" type="number" inputmode="decimal" min="0" step="any" value="1.4"><span id="duct-flow-label">m³/s</span></div><div class="duct-unit-row"><button type="button" data-flow-unit="m3s">m³/s</button><button type="button" data-flow-unit="m3h">m³/h</button><button type="button" data-flow-unit="cfm">CFM</button></div></div>
               </div>
+              <div class="duct-multi">
+                <button id="duct-multi-toggle" class="duct-multi-toggle" type="button" aria-expanded="false" aria-controls="duct-multi-panel">使用多點風速量度（選填）<span>展開</span></button>
+                <div id="duct-multi-panel" class="duct-multi-panel" hidden>
+                  <p class="duct-multi-note">輸入同一風管截面嘅多個風速讀數（m/s），空白測點會自動忽略。系統會先計平均風速，再乘風管截面面積得出風量。</p>
+                  <div id="duct-point-grid" class="duct-point-grid"></div>
+                  <div id="duct-multi-summary" class="duct-multi-summary">尚未輸入有效風速讀數。</div>
+                  <div class="duct-multi-actions"><button id="duct-add-point" class="duct-add-point" type="button">＋ 增加測點</button><button id="duct-apply-average" class="duct-apply-average" type="button" disabled>套用計算風量</button></div>
+                </div>
+              </div>
               <div id="duct-known-size" class="duct-field-grid">
                 <div class="duct-field full duct-round-only"><label for="duct-diameter">圓管內徑</label><div class="duct-input"><input id="duct-diameter" type="number" inputmode="decimal" min="1" value="500"><span>mm</span></div></div>
                 <div class="duct-field duct-rect-only"><label for="duct-width">方管內闊</label><div class="duct-input"><input id="duct-width" type="number" inputmode="decimal" min="1" value="600"><span>mm</span></div></div>
@@ -172,11 +229,17 @@ Error generating stack: `+e.message+`
           nav.insertAdjacentElement('afterend',tool);
           btn.addEventListener('click',()=>setDuctActive(true));
           nav.querySelectorAll('button:not(#duct-tab)').forEach(b=>b.addEventListener('click',()=>{setDuctActive(false);requestAnimationFrame(()=>setDuctActive(false))}));
-          tool.addEventListener('input',calculate);tool.addEventListener('change',calculate);
-          tool.querySelectorAll('[data-duct-shape]').forEach(b=>b.addEventListener('click',()=>{state.shape=b.dataset.ductShape;syncUI()}));
-          tool.querySelectorAll('[data-flow-unit]').forEach(b=>b.addEventListener('click',()=>{state.flowUnit=b.dataset.flowUnit;document.getElementById('duct-flow-label').textContent=b.textContent;syncUI()}));
+          tool.addEventListener('input',e=>{calculate();if(e.target.matches('.duct-point-input,#duct-diameter,#duct-width,#duct-height'))updateMultiSummary()});
+          tool.addEventListener('change',e=>{calculate();if(e.target.matches('.duct-point-input,#duct-diameter,#duct-width,#duct-height'))updateMultiSummary()});
+          tool.querySelectorAll('[data-duct-shape]').forEach(b=>b.addEventListener('click',()=>{state.shape=b.dataset.ductShape;updateMultiSummary();syncUI()}));
+          tool.querySelectorAll('[data-flow-unit]').forEach(b=>b.addEventListener('click',()=>{state.flowUnit=b.dataset.flowUnit;document.getElementById('duct-flow-label').textContent=b.textContent;updateMultiSummary();syncUI()}));
+          const multiToggle=document.getElementById('duct-multi-toggle'),multiPanel=document.getElementById('duct-multi-panel');
+          multiToggle.addEventListener('click',()=>{const open=multiPanel.hidden;multiPanel.hidden=!open;multiToggle.classList.toggle('active',open);multiToggle.setAttribute('aria-expanded',String(open));multiToggle.querySelector('span').textContent=open?'收起':'展開'});
+          document.getElementById('duct-add-point').addEventListener('click',()=>addPoint());
+          document.getElementById('duct-point-grid').addEventListener('click',e=>{if(!e.target.matches('.duct-point-remove'))return;const rows=document.querySelectorAll('.duct-point');if(rows.length<=2)return;e.target.closest('.duct-point').remove();updatePointNumbers();updateMultiSummary()});
+          document.getElementById('duct-apply-average').addEventListener('click',()=>{const flow=updateMultiSummary();if(flow==null)return;document.getElementById('duct-flow').value=String(Math.round(flow*10000)/10000);calculate()});
           document.querySelector('.reset-button')?.addEventListener('click',e=>{if(state.active){e.preventDefault();e.stopImmediatePropagation();resetDuct()}},true);
-          syncUI();return true;
+          for(let i=0;i<6;i++)addPoint();syncUI();return true;
         }
         if(!mount()){
           const observer=new MutationObserver(()=>{if(mount())observer.disconnect()});observer.observe(document.documentElement,{childList:true,subtree:true});
